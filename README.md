@@ -122,6 +122,13 @@ Available Options:
       2. wss
   7. rabbit-tcp
   8. simple-tls
+  9. gost-plugin
+      1. [m]ws
+      2. [m]wss
+      3. [m]tls
+      4. xtls
+      5. quic
+      6. http2
 
 
 注意：
@@ -137,7 +144,7 @@ Available Options:
     使用v2ray-plugin的选项5时，请将CloudFlare后台Crypto页面里的SSL设置，改为 Full 或 Full (strict) 模式（前者不验证
 服务器证书，后者则会），否则，在浏览器打开你的域名会提示 ”重定向的次数过多“ 的错误！！！
 	
-    使用mos-tls-tunnel时，client开启了跳过验证模式，通信过程中client不会验证server的certificate chain 和 host name，用于自签证书的域名可以随意（不需要自备域名）。
+    使用mos-tls-tunnel时，client开启了跳过验证模式，通信过程中client不会验证server的certificate chain 和 host name，用于自签证书的域名可以随意（不需要自备域名）。mos-tls-tunnel已停止开发。但不影响使用。simple-tls是mos-tls-tunnel仅保留tls的后续版本，仍在更新。
 
     使用simple-tls时，由于v0.3.4版本和最新版本只有部分兼容，请注意使用对应版本的客户端。
 
@@ -217,3 +224,6 @@ Available Options:
 - [rabbit-tcp](https://github.com/ihciah/rabbit-tcp/releases)
 - [rabbit-plugin](https://github.com/ihciah/rabbit-plugin/releases)
 - [simple-tls](https://github.com/IrineSistiana/simple-tls/releases)
+- [simple-tls-android](https://github.com/IrineSistiana/simple-tls-android)
+- [gost-plugin](https://github.com/maskedeken/gost-plugin/releases)
+- [gost-plugin-android](https://github.com/maskedeken/gost-plugin-android/releases)
