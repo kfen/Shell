@@ -15,6 +15,16 @@ intall_acme_tool(){
     fi
 }
 
+get_latest_acme_sh(){
+    echo -e "${Info} 升级 acme.sh 为最新的代码. "
+    ~/.acme.sh/acme.sh --upgrade
+}
+
+set_defualt_ca_for_acme_sh(){
+    echo -e "${Info} 设置默认 ca 为  letsencrypt."
+    ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt
+}
+
 get_input_api_info(){
     while true
     do
@@ -79,6 +89,8 @@ acme_get_certificate_by_force(){
     local domain=$1
 
     intall_acme_tool
+    get_latest_acme_sh
+    set_defualt_ca_for_acme_sh
             
     if [ ! "$(command -v socat)" ]; then
         echo -e "${Info} 开始安装强制生成时必要的socat 软件包."
@@ -88,10 +100,10 @@ acme_get_certificate_by_force(){
     echo
     echo -e "${Info} 开始生成域名 ${domain} 相关的证书 "
     echo
-    ~/.acme.sh/acme.sh --issue -d ${domain}   --standalone
+    ~/.acme.sh/acme.sh --issue -d ${domain} -k ec-256 --standalone
     
-    cerPath="/root/.acme.sh/${domain}/fullchain.cer"
-    keyPath="/root/.acme.sh/${domain}/${domain}.key"
+    cerPath="/root/.acme.sh/${domain}_ecc/fullchain.cer"
+    keyPath="/root/.acme.sh/${domain}_ecc/${domain}.key"
     
     echo
     echo -e "${Info} ${domain} 证书生成完成. "
@@ -103,16 +115,18 @@ acme_get_certificate_by_api(){
 
     choose_api_get_mode
     intall_acme_tool
+    get_latest_acme_sh
+    set_defualt_ca_for_acme_sh
 
     echo
     echo -e "${Info} 开始生成域名 ${domain} 相关的证书 "
     echo
     export CF_Key=${CF_Key}
     export CF_Email=${CF_Email}
-    ~/.acme.sh/acme.sh --issue --dns dns_cf -d ${domain}
+    ~/.acme.sh/acme.sh --issue --dns dns_cf -d ${domain} -k ec-256
     
-    cerPath="/root/.acme.sh/${domain}/fullchain.cer"
-    keyPath="/root/.acme.sh/${domain}/${domain}.key"
+    cerPath="/root/.acme.sh/${domain}_ecc/fullchain.cer"
+    keyPath="/root/.acme.sh/${domain}_ecc/${domain}.key"
     
     echo
     echo -e "${Info} ${domain} 证书生成完成. "
@@ -124,25 +138,27 @@ acme_get_certificate_by_manual(){
     local isForce=${2:-""}
 
     intall_acme_tool
+    get_latest_acme_sh
+    set_defualt_ca_for_acme_sh
 
     echo
     echo -e "${Info} 开始生成域名 ${domain} 相关的证书 "
     echo
-    ~/.acme.sh/acme.sh --issue --dns -d ${domain} --yes-I-know-dns-manual-mode-enough-go-ahead-please ${isForce}
+    ~/.acme.sh/acme.sh --issue --dns -d ${domain} -k ec-256 --yes-I-know-dns-manual-mode-enough-go-ahead-please ${isForce}
     if [[ $? -ne 0 && $? -ne 2 ]]; then
         echo
         echo -e "${Info}请根据上方提示，去Cloudflare上添加txt记录，完成后按任意键开始。"
         echo -e "${Info}如果出现“too many certificates already issued for exact set of domains”错误，请按Ctrl+C终止。"
         char=`get_char`
     
-        ~/.acme.sh/acme.sh --renew -d ${domain} --yes-I-know-dns-manual-mode-enough-go-ahead-please ${isForce}
+        ~/.acme.sh/acme.sh --renew -d ${domain} --ecc --yes-I-know-dns-manual-mode-enough-go-ahead-please ${isForce}
         if [[ $? -ne 0 ]]; then
             acme_get_certificate_by_manual "${domain}" "${isForce}"
         fi
     fi
 
-    cerPath="/root/.acme.sh/${domain}/fullchain.cer"
-    keyPath="/root/.acme.sh/${domain}/${domain}.key"
+    cerPath="/root/.acme.sh/${domain}_ecc/fullchain.cer"
+    keyPath="/root/.acme.sh/${domain}_ecc/${domain}.key"
     
     echo
     echo -e "${Info} ${domain} 证书生成完成. "

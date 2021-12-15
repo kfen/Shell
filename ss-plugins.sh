@@ -5,7 +5,7 @@ export PATH
 
 # shell version
 # ====================
-SHELL_VERSION="2.7.0"
+SHELL_VERSION="2.7.3"
 # ====================
 
 
@@ -183,6 +183,7 @@ usage() {
 	  script           升级脚本
 	  show             可视化配置
 	  log              查看日志文件
+	  catcfg           查看原始配置文件
 	  uid              添加一个新的uid用户(Cloak)
 	  cert             为.cf .ga .gq .ml .tk申请证书(90天)
 	  link             用新添加的uid生成一个新的SS://链接(Cloak)
@@ -335,6 +336,21 @@ check_sys(){
             return 1
         fi
     fi
+}
+
+check_arch(){
+    case "$(uname -m)" in
+      'amd64' | 'x86_64')
+        ARCH='amd64'
+        ;;
+      'armv8' | 'aarch64')
+        ARCH='arm64'
+        ;;
+      *)
+        echo "[${Red}Error${suffix}] The architecture is not supported."
+        exit 1
+        ;;
+    esac
 }
 
 package_install(){
@@ -591,10 +607,21 @@ config_ss(){
     local server_value="\"0.0.0.0\""
 
     if get_ipv6; then
-        local V=${SS_VERSION}
-        local N=${plugin_num}
-        if [[ ${V} = "ss-libev" ]] && [[ ${N} = "2" ]] || [[ ${N} = "3" ]] || [[ ${N} == "5" ]] || [[ -z ${N} ]]; then
+        local ssVer=${SS_VERSION}
+        local pluginNum=${plugin_num}
+
+        if [[ ${ssVer} = "ss-libev" ]]; then
             server_value="[\"[::0]\",\"0.0.0.0\"]"
+        elif [[ ${ssVer} = "ss-rust" ]]; then
+            server_value="\"::\""
+        fi
+
+        if [[ ${pluginNum} = "4" ]]; then
+            server_value="\"0.0.0.0\""
+        elif [[ ${pluginNum} = "6" ]]; then
+            server_value="\"0.0.0.0\""
+        elif [[ ${pluginNum} = "7" ]]; then
+            server_value="\"0.0.0.0\""
         fi
     fi
 
@@ -934,19 +961,13 @@ install_cleanup(){
     rm -rf ${shadowsocks_rust_file}.tar.xz
     
     # v2ray-plugin
-    rm -rf v2ray-plugin_linux_amd64 ${v2ray_plugin_file}.tar.gz
+    rm -rf ${v2ray_plugin_file}.tar.gz
     
     # kcptun
-    rm -rf client_linux_amd64 server_linux_amd64 ${kcptun_file}.tar.gz
+    rm -rf client_linux_${ARCH} ${kcptun_file}.tar.gz
     
     # simple-obfs
     rm -rf simple-obfs
-    
-    # goquiet
-    rm -rf ${goquiet_file}
-    
-    # cloak
-    rm -rf ${cloak_file}
     
     # mos-tls-tunnel
     rm -rf ${mtt_file}.zip LICENSE README.md mtt-client
@@ -997,6 +1018,11 @@ do_log(){
 do_cert(){
     improt_package "utils" "gen_certificates.sh"
     acme_get_certificate_by_manual_force "$1"
+}
+
+do_catcfg(){
+    improt_package "utils" "view_config.sh"
+    view_config_logic
 }
 
 do_start(){
@@ -1103,6 +1129,7 @@ do_install(){
 
 
 # install and tools
+check_arch
 action=${1:-"install"}
 
 case ${action} in
@@ -1131,6 +1158,9 @@ case ${action} in
         do_${action}
         ;;
     cert)
+        do_${action} "${2}"
+        ;;
+    catcfg)
         do_${action} "${2}"
         ;;
     help)
