@@ -64,6 +64,7 @@ shadowsocks_uninstall(){
     rm -f /usr/local/bin/sslocal
     rm -f /usr/local/bin/ssurl
     rm -f /usr/local/bin/ssmanager
+    rm -f /usr/local/bin/ssservice
     rm -f ${SHADOWSOCKS_RUST_INIT}
 
     # uninstall go-ss2
@@ -198,6 +199,14 @@ xray_plugin_uninstall(){
     rm -f /usr/local/bin/xray-plugin
 }
 
+qtun_uninstall(){
+    ps -ef |grep -v grep | grep qtun-server |awk '{print $2}' | xargs kill -9 > /dev/null 2>&1
+
+    # uninstall qtun
+    rm -f /var/run/qtun.pid
+    rm -f /usr/local/bin/qtun-server
+}
+
 caddy_uninstall(){
     if [[ -e ${CADDY_BIN_PATH} ]]; then
         PID=`ps -ef |grep "caddy" |grep -v "grep" |grep -v "init.d" |grep -v "service" |grep -v "caddy_install" |awk '{print $2}'`
@@ -260,6 +269,7 @@ uninstall_services(){
     simple_tls_uninstall
     gost_plugin_uninstall
     xray_plugin_uninstall
+    qtun_uninstall
     caddy_uninstall
     nginx_uninstall
     ipcalc_uninstall
