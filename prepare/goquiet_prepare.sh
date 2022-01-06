@@ -1,92 +1,51 @@
-auto_get_ip_of_domain(){
-    local domain=$1
-    local ipv4Re="((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])"
-    
-    if [ ! "$(command -v nslookup)" ]; then
-        if check_sys packageManager yum; then
-            package_install "bind-utils" > /dev/null 2>&1
-        elif check_sys packageManager apt; then
-            package_install "dnsutils" > /dev/null 2>&1
-        fi
-    fi
-
-    domain_ip=`nslookup ${domain} | grep -E 'Name:' -A 1 | grep -oE $ipv4Re | tail -1`
-    if [[ -n "${domain_ip}" ]]; then
-        return 0
-    else
-        return 1
-    fi
-}
-
 get_input_domain(){
     while true
     do
-        echo
-        echo -e "请为GoQuiet输入重定向域名"
-        read -e -p "(默认: www.bing.com):" domain
-        [ -z "$domain" ] && domain="www.bing.com"
-        if [ -z "$(echo $domain | grep -E ${DOMAIN_RE})" ]; then
-            echo
-            echo -e "${Error} 请输入正确合法的域名."
-            echo
+        _read "请输入重定向域名 (默认: cloudfront.com):"
+        domain="${inputInfo}"
+        [ -z "$domain" ] && domain="cloudfront.com"
+        if ! judge_is_domain "${domain}"; then
+            _echo -e "请输入一个格式正确的域名."
             continue
         fi
-        
-        if ! auto_get_ip_of_domain ${domain}; then
-            echo
-            echo -e "${Error} 请输入正确合法的域名."
-            echo
+        if ! judge_is_valid_domain "${domain}"; then
+            _echo -e "无法解析到IP，请输入一个正确有效的域名."
             continue
         fi
-        
-        echo
-        echo -e "${Red}  ServerName = ${domain}${suffix}"
-        echo 
+        _echo -r "  ServerName = ${domain}"
         break
     done
 }
 
-get_input_webaddr_of_domain(){
+get_input_webaddr(){
     while true
     do
-        echo
-        echo -e "请为GoQuiet输入与重定向域名对应的IP（默认为自动获取）"
-        read -e -p "(默认: ${domain_ip}:443):" gqwebaddr
+        _read "请输入与重定向域名对应的IP (默认: ${domain_ip}:443):"
+        gqwebaddr="${inputInfo}"
         [ -z "$gqwebaddr" ] && gqwebaddr="${domain_ip}:443"
-        if [ -z "$(echo $gqwebaddr | grep -E ${IPV4_PORT_RE})" ]; then
-            echo
-            echo -e "${Error} 请输入正确合法的IP:443组合."
-            echo
+        if ! judge_is_ip_colon_port_format "${gqwebaddr}"; then
+            _echo -e "请输入正确合法的IP:443组合."
             continue
         fi
-        
-        echo
-        echo -e "${Red}  WebServerAddr = ${gqwebaddr}${suffix}"
-        echo
-        echo -e "${Tip} SS-libev端口已被重置为${Green}${shadowsocksport}${suffix}"
-        echo 
+        _echo -r "  WebServerAddr = ${gqwebaddr}"
         break
     done
 }
 
 get_input_gqkey(){
-    echo
-    echo -e "请为GoQuiet输入密钥 [留空以将其设置为16位随机字符串]"
-    read -e -p "(默认: ${ran_str16}):" gqkey
-    [ -z "$gqkey" ] && gqkey=${ran_str16}
-    echo
-    echo -e "${Red}  Key = ${gqkey}${suffix}"
-    echo
+    gen_random_str
+    _read "请输入密钥 (默认: ${ran_str12}):"
+    gqkey="${inputInfo}"
+    [ -z "$gqkey" ] && gqkey=${ran_str12}
+    _echo -r "  Key = ${gqkey}"
 }
 
 install_prepare_libev_goquiet(){
-    if check_port_occupy "443"; then
-        echo -e "${Error} 检测到443端口被占用，请排查后重新运行." && exit 1
-    fi
-    gen_random_str
-    shadowsocksport=443
+    firewallNeedOpenPort=443
+    shadowsocksport="${firewallNeedOpenPort}"
+    kill_process_if_port_occupy "${firewallNeedOpenPort}"
     get_input_domain
-    get_input_webaddr_of_domain
+    get_input_webaddr
     get_input_gqkey
 }
 

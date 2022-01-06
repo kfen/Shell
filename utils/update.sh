@@ -14,7 +14,7 @@ judge_current_version_num_is_none_and_output_error_info(){
     local appName=$1
     local currentVersion=$2
     
-    [ -z ${currentVersion} ] && echo -e "${Error} 获取${appName}当前版本号失败，退出运行." && exit 1
+    [ -z ${currentVersion} ] && _echo -e "获取${appName}当前版本号失败，退出运行." && exit 1
 }
 
 judge_not_update_and_output_point_info(){
@@ -33,7 +33,7 @@ judge_not_update_when_simple_tls_is_specified_version(){
     local currentVersion=$2
 
     if [[ -e ${SIMPLE_TLS_BIN_PATH} ]]; then
-        if ! check_latest_version "0.5.2" ${currentVersion}; then
+        if ! check_latest_version "0.4.7" ${currentVersion}; then
             echo -e "${Point} ${appName}当前版本是${currentVersion}及以下版本，与最新版本不兼容，脚本不提供更新."
             exit 0
         fi
@@ -45,7 +45,7 @@ update_download(){
     local downloadFileName=$2
     local SS_VERSION plugin_num
     
-    echo -e "${Info} 检测到${downloadFileName}有新版本，开始下载."
+    _echo -i "检测到${downloadFileName}有新版本，开始下载."
     if $(judge_is_num "${downloadMark}"); then
         plugin_num=${downloadMark}
         download_plugins_file
@@ -53,7 +53,7 @@ update_download(){
         SS_VERSION=${downloadMark}
         download_ss_file
     fi
-    echo -e "${Info} ${downloadFileName}下载完成，等待安装."
+    _echo -i "${downloadFileName}下载完成，等待安装."
 }
 
 update_install(){
@@ -71,7 +71,7 @@ update_completed(){
     local appName=$1
     local latestVersion=$2
 
-    echo -e "${Info} ${appName}已成功升级为最新版本${latestVersion}" && echo
+    _echo -i "${appName}已成功升级为最新版本${latestVersion}" && echo
     install_cleanup
 }
 
@@ -84,7 +84,7 @@ read_version_num(){
 }
 
 ss_update_preparation(){
-    ssUpdatePackageName="tools"
+    ssUpdatePackageName="install"
     if [[ -e ${SHADOWSOCKS_LIBEV_BIN_PATH} ]]; then
         ssNameUpdate="shadowsocks-libev"
         ssUpdateDownloadMark="ss-libev"
@@ -110,7 +110,7 @@ ss_update_preparation(){
 }
 
 plugins_update_preparation(){
-    pluginUpdatePackageName="plugins"
+    pluginUpdatePackageName="install"
     if [[ -e ${V2RAY_PLUGIN_BIN_PATH} ]]; then
         pluginNameUpdate="v2ray-plugin"
         pluginUpdateDownloadMark="1"
@@ -190,6 +190,13 @@ plugins_update_preparation(){
         pluginUpdateCalledFuncName="install_qtun"
         pluginLatestVersion=$(get_plugins_version "${pluginNameUpdate}")
         pluginCurrentVersion=$(read_version_num "${QTUN_VERSION_FILE}")
+    elif [[ -e ${GUN_BIN_PATH} ]]; then
+        pluginNameUpdate="gun"
+        pluginUpdateDownloadMark="12"
+        pluginUpdateShFileName="gun_install.sh"
+        pluginUpdateCalledFuncName="install_gun"
+        pluginLatestVersion=$(get_plugins_version "${pluginNameUpdate}")
+        pluginCurrentVersion=$(read_version_num "${GUN_VERSION_FILE}")
     fi
 }
 
@@ -197,7 +204,7 @@ update_caddy_v1(){
     local versionMark=$1
     
     local appName="caddy"
-    local packageName="tools"
+    local packageName="webServer"
     local shFileName="caddy_install.sh"
     local calledFuncName="install_caddy"
 
@@ -205,7 +212,7 @@ update_caddy_v1(){
 
     cd ${CUR_DIR}
     currentVersion=$(caddy -version)
-    echo -e "${Info} 当前版本：${currentVersion}"
+    _echo -i "当前版本：${currentVersion}"
     read -p "是否强制覆盖安装caddy(默认: n) [y/n]: " yn
     [ -z "${yn}" ] && yn="N"
     case "${yn:0:1}" in
@@ -213,10 +220,10 @@ update_caddy_v1(){
             caddyVerFlag="${versionMark}"
             update_install "${packageName}" "${shFileName}" "${calledFuncName}"
             latestVersion=$(caddy -version)
-            echo -e "${Info} 覆盖版本：${latestVersion}"
+            _echo -i "覆盖版本：${latestVersion}"
             ;;
         *)
-            echo -e "${Info} 跳过强制安装。"
+            _echo -i "跳过强制安装。"
             ;;
     esac
 
@@ -228,7 +235,7 @@ update_caddy_v2(){
     local currentVersion=$2
 
     local appName="caddy2"
-    local packageName="tools"
+    local packageName="webServer"
     local shFileName="caddy_install.sh"
     local calledFuncName="install_caddy"
 
@@ -240,7 +247,7 @@ update_caddy_v2(){
     judge_current_version_num_is_none_and_output_error_info "${appName}" "${currentVersion}"
     judge_latest_version_num_is_none_and_output_error_info "${appName}" "${latestVersion}"
     judge_not_update_and_output_point_info "${appName}" "${currentVersion}" "${latestVersion}"
-    echo -e "${Info} 检测到${appName}有新版本，开始下载."
+    _echo -i "检测到${appName}有新版本，开始下载."
     caddyVerFlag="${versionMark}"
     update_install "${packageName}" "${shFileName}" "${calledFuncName}"
     update_completed "${ssNameUpdate}" "${ssLatestVersion}"

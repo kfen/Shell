@@ -4,296 +4,193 @@ improt_package "utils" "gen_certificates.sh"
 SIMPLE_TLS_VERSION=(
 v0.3.4
 v0.4.7
-LatestRelease
+latest
 )
 
 # simple-tls Transport mode
-SIMPLE_TLS_MODE=(
+MODE_V034=(
 tls
 wss
 )
 
+CERTIFICATE_TYPE=(
+"临时证书"
+"固定证书"
+)
 
-simple_tls_version(){
+
+is_enable_random_header_for_v034(){
     while true
     do
-        echo && echo -e "请选择simple-tls安装版本\n"
-        for ((i=1;i<=${#SIMPLE_TLS_VERSION[@]};i++ )); do
-            hint="${SIMPLE_TLS_VERSION[$i-1]}"
-            echo -e "${Green}  ${i}.${suffix} ${hint}"
-        done
-        echo
-        read -e -p "(默认: ${SIMPLE_TLS_VERSION[2]}):" SimpleTlsVer
-        [ -z "$SimpleTlsVer" ] && SimpleTlsVer=3
-        expr ${SimpleTlsVer} + 1 &>/dev/null
-        if [ $? -ne 0 ]; then
-            echo
-            echo -e "${Error} 请输入一个数字"
-            echo
-            continue
-        fi
-        if [[ "$SimpleTlsVer" -lt 1 || "$SimpleTlsVer" -gt ${#SIMPLE_TLS_VERSION[@]} ]]; then
-            echo
-            echo -e "${Error} 请输入一个数字在 [1-${#SIMPLE_TLS_VERSION[@]}] 之间"
-            echo
-            continue
-        fi
-
-        stVer=${SIMPLE_TLS_VERSION[$SimpleTlsVer-1]}
-        echo
-        echo -e "${Red}  version = ${stVer}${suffix}"
-        echo
-
-        break
-    done
-}
-
-transport_mode_menu(){
-    while true
-    do
-        echo && echo -e "请为simple-tls选择 Transport mode\n"
-        for ((i=1;i<=${#SIMPLE_TLS_MODE[@]};i++ )); do
-            hint="${SIMPLE_TLS_MODE[$i-1]}"
-            echo -e "${Green}  ${i}.${suffix} ${hint}"
-        done
-        echo
-        read -e -p "(默认: ${SIMPLE_TLS_MODE[0]}):" libev_simple_tls
-        [ -z "$libev_simple_tls" ] && libev_simple_tls=1
-        expr ${libev_simple_tls} + 1 &>/dev/null
-        if [ $? -ne 0 ]; then
-            echo
-            echo -e "${Error} 请输入一个数字"
-            echo
-            continue
-        fi
-        if [[ "$libev_simple_tls" -lt 1 || "$libev_simple_tls" -gt ${#SIMPLE_TLS_MODE[@]} ]]; then
-            echo
-            echo -e "${Error} 请输入一个数字在 [1-${#SIMPLE_TLS_MODE[@]}] 之间"
-            echo
-            continue
-        fi
-
-        shadowsocklibev_simple_tls=${SIMPLE_TLS_MODE[$libev_simple_tls-1]}
-        echo
-        echo -e "${Red}  over = ${shadowsocklibev_simple_tls}${suffix}"
-        echo
-
-        break
-    done
-}
-
-Info_display_of_domain(){
-    domainType=$1
-
-    echo
-    echo -e "${Red}  n = ${serverName}${suffix} ${Green}(${domainType})${suffix}"
-    echo
-}
-
-get_input_server_name(){
-    while true
-    do
-        echo
-        if [[ ${libev_simple_tls} = "1" ]]; then
-            echo -e "请输入一个域名(DNS-Only 或 Other)"
-        elif [[ ${libev_simple_tls} = "2" ]]; then
-            echo -e "请输入一个域名(CDN 或 DNS-Only 或 Other)"
-        fi
-        read -e -p "(默认: www.bing.com):" serverName
-        [ -z "$serverName" ] && serverName="www.bing.com"
-        if ! get_domain_ip ${serverName}; then
-            echo
-            echo -e "${Error} 请输入一个正确有效的域名."
-            echo
-            continue
-        fi
-
-        if [[ ${libev_simple_tls} = "1" ]]; then
-            if is_dns_only ${domain_ip}; then
-                Info_display_of_domain "DNS-Only"
-                break
-            else
-                Info_display_of_domain "Other"
-                break
-            fi
-        elif [[ ${libev_simple_tls} = "2" ]]; then
-            if is_cdn_proxied ${domain_ip}; then
-                Info_display_of_domain "CDN"
-                break
-            elif is_dns_only ${domain_ip}; then
-                Info_display_of_domain "DNS-Only"
-                break
-            else
-                Info_display_of_domain "Other"
-                break
-            fi
-        fi
-   done
-}
-
-get_input_wss_path(){
-    while true
-    do
-        echo
-        read -e -p "请输入你的WebSocket分流路径(默认：/simple)：" wssPath
-        [ -z "${wssPath}" ] && wssPath="/simple"
-        if [[ $wssPath != /* ]]; then
-            echo
-            echo -e "${Error} 请输入以${Red} / ${suffix}开头的路径."
-            echo
-            continue
-        fi
-        echo
-        echo -e "${Red}  wssPath = ${wssPath}${suffix}"
-        echo
-        break
-    done
-}
-
-is_add_random_header(){
-    while true
-    do
-        echo
-        echo -e "是否启用 random header(512b~16Kb)，以防止流量分析(rh)"
-        read -p "(默认: n) [y/n]: " yn
+        _read "是否启用random header(512b~16Kb)以防止流量分析(rh) (默认: n) [y/n]:"
+        local yn="${inputInfo}"
         [ -z "${yn}" ] && yn="N"
         case "${yn:0:1}" in
             y|Y)
-                isEnable=enable
+                isEnableRh=enable
                 ;;
             n|N)
-                isEnable=disable
+                isEnableRh=disable
                 ;;
             *)
-                echo
-                echo -e "${Error} 输入有误，请重新输入!"
-                echo
+                _echo -e "输入有误，请重新输入."
                 continue
                 ;;
         esac
-
-        echo
-        echo -e "${Red}  rh = ${isEnable}${suffix}"
-        echo
+        _echo -r "  rh = ${isEnableRh}"
         break
     done
 }
 
-is_enable_padding_data(){
+is_enable_padding_data_for_v047(){
     while true
     do
-        echo
-        echo -e "是否启用 padding-data 模式，以防止流量分析(pd)"
-        read -p "(默认: n) [y/n]: " yn
+        _read "是否启用padding-data模式，以防止流量分析(pd) (默认: n) [y/n]:"
+        local yn="${inputInfo}"
         [ -z "${yn}" ] && yn="N"
         case "${yn:0:1}" in
             y|Y)
-                isEnable=enable
+                isEnablePd=enable
                 ;;
             n|N)
-                isEnable=disable
+                isEnablePd=disable
                 ;;
             *)
-                echo
-                echo -e "${Error} 输入有误，请重新输入!"
-                echo
+                _echo -e "输入有误，请重新输入."
                 continue
                 ;;
         esac
-
-        echo
-        echo -e "${Red}  pd = ${isEnable}${suffix}"
-        echo
+        _echo -r "  pd = ${isEnablePd}"
         break
     done
 }
 
-is_enable_auth(){
+is_enable_auth_for_latest(){
     while true
     do
         echo
-        echo -e "是否启用身份验证密码，以过滤扫描流量(auth)"
-        read -p "(默认: n) [y/n]: " yn
+        _read "是否启用身份验证密码，以过滤扫描流量(auth) (默认: n) [y/n]: "
+        local yn="${inputInfo}"
         [ -z "${yn}" ] && yn="N"
         case "${yn:0:1}" in
             y|Y)
-                isEnable=enable
+                isEnableAuth=enable
                 ;;
             n|N)
-                isEnable=disable
+                isEnableAuth=disable
                 ;;
             *)
-                echo
-                echo -e "${Error} 输入有误，请重新输入!"
-                echo
+                _echo -e "输入有误，请重新输入."
                 continue
                 ;;
         esac
-
-        echo
-        echo -e "${Red}  isEnableAuth = ${isEnable}${suffix}"
-        echo
+        _echo -r "  auth = ${isEnableAuth}"
         break
     done
 }
 
-get_input_auth_passwd(){
+get_input_auth_passwd_for_latest(){
     gen_random_str
-    echo -e "\n请输入身份验证密码"
-    read -e -p "(默认: ${ran_str8}):" auth
-    [ -z "${auth}" ] && auth=${ran_str8}
-    echo
-    echo -e "${Red}  auth = ${auth}${suffix}"
-    echo
+    _read "请输入身份验证密码 (默认: ${ran_str12}):"
+    auth="${inputInfo}"
+    [ -z "${auth}" ] && auth="${ran_str12}"
+    _echo -r "${Red}  auth = ${auth}${suffix}"
 }
 
-check_port_for_simple_tls(){
-    shadowsocksport=443
+tls_mode_logic_for_v043(){
+    do_you_have_domain
+    if [ "${doYouHaveDomian}" = "No" ]; then
+        firewallNeedOpenPort="${shadowsocksport}"
+        get_all_type_domain
+    elif [ "${doYouHaveDomian}" = "Yes" ]; then
+        firewallNeedOpenPort=443
+        shadowsocksport="${firewallNeedOpenPort}"
+        kill_process_if_port_occupy "${firewallNeedOpenPort}"
+        get_specified_type_domain "DNS-Only"
+    fi
+    is_enable_random_header_for_v034
+    if [ "${domainType}" = "DNS-Only" ]; then
+        acme_get_certificate_by_force "${domain}"
+    fi
+}
 
-    if check_port_occupy "443"; then
-        echo -e "${Error} 检测到443端口被占用，请排查后重新运行." && exit 1
+wss_mode_logic_for_v043(){
+    do_you_have_domain
+    if [ "${doYouHaveDomian}" = "No" ]; then
+        firewallNeedOpenPort="${shadowsocksport}"
+        get_all_type_domain
+    elif [ "${doYouHaveDomian}" = "Yes" ]; then
+        firewallNeedOpenPort=443
+        shadowsocksport="${firewallNeedOpenPort}"
+        kill_process_if_port_occupy "${firewallNeedOpenPort}"
+        get_specified_type_domain "DNS-Only"
+    fi
+    get_input_ws_path
+    is_enable_random_header_for_v034
+    if [ "${domainType}" = "DNS-Only" ]; then
+        acme_get_certificate_by_force "${domain}"
+    fi
+}
+
+version_034_logic(){
+    generate_menu_logic "${MODE_V034[*]}" "传输模式" "1"
+    modeOptsNumV034="${inputInfo}"
+    if [ "${modeOptsNumV034}" = "1" ]; then
+        tls_mode_logic_for_v043
+    elif [ "${modeOptsNumV034}" = "2" ]; then
+        wss_mode_logic_for_v043
+    fi
+}
+
+version_047_logic(){
+    do_you_have_domain
+    if [ "${doYouHaveDomian}" = "No" ]; then
+        firewallNeedOpenPort="${shadowsocksport}"
+        get_all_type_domain
+    elif [ "${doYouHaveDomian}" = "Yes" ]; then
+        firewallNeedOpenPort=443
+        shadowsocksport="${firewallNeedOpenPort}"
+        kill_process_if_port_occupy "${firewallNeedOpenPort}"
+        get_specified_type_domain "DNS-Only"
+    fi
+    is_enable_padding_data_for_v047
+    if [ "${domainType}" = "DNS-Only" ]; then
+        acme_get_certificate_by_force "${domain}"
+    fi
+}
+
+version_latest_logic(){
+    do_you_have_domain
+    if [ "${doYouHaveDomian}" = "No" ]; then
+        firewallNeedOpenPort="${shadowsocksport}"
+        get_all_type_domain
+        generate_menu_logic "${CERTIFICATE_TYPE[*]}" "证书类型(无合法证书时)" "1"
+        certificateTypeOptNum="${inputInfo}"
+    elif [ "${doYouHaveDomian}" = "Yes" ]; then
+        firewallNeedOpenPort=443
+        shadowsocksport="${firewallNeedOpenPort}"
+        kill_process_if_port_occupy "${firewallNeedOpenPort}"
+        get_specified_type_domain "DNS-Only"
+    fi
+    is_disable_mux_logic
+    is_enable_auth_for_latest
+    if [ "${isEnableAuth}" = "enable" ]; then
+        get_input_auth_passwd_for_latest
+    fi
+    if [ "${domainType}" = "DNS-Only" ]; then
+        acme_get_certificate_by_force "${domain}"
     fi
 }
 
 install_prepare_libev_simple_tls(){
-    simple_tls_version
-    # v0.3.4
-    if [[ ${SimpleTlsVer} = "1" ]]; then
-        transport_mode_menu
-        get_input_server_name
-        is_add_random_header
-    fi
-
-    # v0.4.7
-    if [[ ${SimpleTlsVer} = "2" ]]; then
-        libev_simple_tls=1
-        get_input_server_name
-        is_enable_padding_data
-    fi
-
-    # LatestRelease
-    if [[ ${SimpleTlsVer} = "3" ]]; then
-        libev_simple_tls=1
-        get_input_server_name
-        is_enable_auth
-        if [[ ${isEnable} = enable ]]; then
-            get_input_auth_passwd
-        fi
-    fi
-
-    check_port_for_simple_tls
-
-    if [[ ${libev_simple_tls} = "1" ]]; then
-        if [[ ${domainType} = DNS-Only ]]; then
-            acme_get_certificate_by_force "${serverName}"
-        fi
-    elif [[ ${libev_simple_tls} = "2" ]]; then
-        get_input_wss_path
-
-        if [[ ${domainType} = DNS-Only ]]; then
-            acme_get_certificate_by_force "${serverName}"
-        elif [[ ${domainType} = CDN ]]; then
-            acme_get_certificate_by_api_or_manual "${serverName}"
-        fi
+    generate_menu_logic "${SIMPLE_TLS_VERSION[*]}" "simple-tls版本" "3"
+    SimpleTlsVer="${inputInfo}"
+    improt_package "utils" "common_prepare.sh"
+    if [ "${SimpleTlsVer}" = "1" ]; then
+        version_034_logic
+    elif [ "${SimpleTlsVer}" = "2" ]; then
+        version_047_logic
+    elif [ "${SimpleTlsVer}" = "3" ]; then
+        version_latest_logic
     fi
 }

@@ -81,7 +81,7 @@ Available Options:
   acme.sh安装目录：~/.acme.sh
   acme.sh生成证书目录：~/.acme.sh/xxx.xxx(域名)/
 
-  cloudflare API存储路径：~/.api/cf.api
+  cloudflare API存储路径：/root/.cloudflare/apiInfo
   其它插件可执行二进制文件目录：/usr/local/bin
 ```
 
@@ -107,53 +107,44 @@ Available Options:
 
 ~~~shell
   1. v2ray-plugin
-      1. ws+http
-      2. ws+tls+[cdn]
-      3. quic+tls+[cdn]
-      4. ws+tls+web
-      5. ws+tls+web+cdn
+      1. ws
+      2. wss
+      3. quic
+      4. grpc
   2. kcptun
   3. simple-obfs
       1. http
       2. tls
-  4. goquiet (unofficial)
-  5. cloak (based goquiet)
+  4. goquiet
+  5. cloak
   6. mos-tls-tunnel
       1. tls
       2. wss
   7. rabbit-tcp
   8. simple-tls
+      1. v0.3.4
+      2. v0.4.7
+      3. latest
   9. gost-plugin
-      1. [m]ws
-      2. [m]wss
-      3. [m]tls
+      1. ws
+      2. wss
+      3. tls
       4. xtls
       5. quic
       6. http2
+      7. grpc
  10. xray-plugin
       1. ws
       2. wss
       3. quic
+      4. grpc
  11. qtun
+ 12. gun
+      1. grpc-with-tls
+      2. grpc-without-tls
 
 注意：
-    kcptun仅用于加速。
-    simple-obfs已被弃用，但不影响使用。
-    cloak是goquiet的升级版，增加了同端口，多用户。
-    v2ray-plugin，带tls的都需要域名，cdn此处仅支持cloudflare，web则用了caddy。
-	
-    使用v2ray-plugin的选项3时，请在CloudFlare后台Network页面，找到QUIC BETA设置项，点击Join the Waitlist 进行申请
-成功会收到邮件通知。由于是测试版，申请成功时间未定，也就意味着quic+tls+cdn，短时间无法使用。如需跳过cdn 只使用quic+tls 
-则须将ss客户端的 <服务器地址> --> <改为ip> 来使用（如若，依旧要填写域名，请使用原域名服务器进行解析。）
-	
-    使用v2ray-plugin的选项5时，请将CloudFlare后台Crypto页面里的SSL设置，改为 Full 或 Full (strict) 模式（前者不验证
-服务器证书，后者则会），否则，在浏览器打开你的域名会提示 ”重定向的次数过多“ 的错误！！！
-	
-    使用mos-tls-tunnel时，client开启了跳过验证模式，通信过程中client不会验证server的certificate chain 和 host name，用于自签证书的域名可以随意（不需要自备域名）。mos-tls-tunnel已停止开发。但不影响使用。simple-tls是mos-tls-tunnel仅保留tls的后续版本，仍在更新。
-
-    使用simple-tls时，由于v0.3.4版本和最新版本只有部分兼容，请注意使用对应版本的客户端。
-
-	 
+    使用CDN时，请将 CloudFlare “SSL/TLS”-“概述”选项卡中，改为 “完全” 或 “完全 (严格)” 模式（前者不验证服务器证书，后者则会），否则，在浏览器打开你的域名会提示 ”重定向的次数过多“ 的错误。另外，使用CDN + gRPC时，请在 CloudFlare “网络”选项卡中，打开 gRPC。
 ~~~
 
 &nbsp;
@@ -179,13 +170,8 @@ Available Options:
 
  手机参数 : crypt=aes;key=0EP4edcP;mtu=1350;sndwnd=1024;rcvwnd=1024;mode=fast2;datashard=10;parityshard=3;dscp=46;nocomp=true
 
+ SS二维码 : ./ss-plugins.sh scan < ss://links >
  SS  链接 : ss://YWVzLTI1Ni1nY206YmMxeFFrajM=@66.66.66.66:6666/?plugin=kcptun%3bcrypt%3daes%3bkey%3d0EP4edcP%3bmtu%3d1350%3bsndwnd%3d1024%3brcvwnd%3d1024%3bmode%3dfast2%3bdatashard%3d10%3bparityshard%3d3%3bdscp%3d46%3bnocomp%3dtrue
- SS二维码 : ./ss-plugins.sh scan < A link at the beginning of ss:// >
-
-
- [注意] SS链接不支持插件参数导入，请手动填写。使用kcptun插件时，该链接只支持手机导入.
-        插件程序下载：https://github.com/xtaci/kcptun/releases 下载 windows-amd64 版本.
-        请解压将带client字样的文件重命名为 kcptun.exe 并移至 SS-Windows 客户端-安装目录的根目录.
 ~~~
 
 &nbsp;
@@ -235,3 +221,4 @@ Available Options:
 - [xray-plugin](https://github.com/teddysun/xray-plugin)
 - [xray-plugin-android](https://github.com/teddysun/xray-plugin-android)
 - [qtun](https://github.com/shadowsocks/qtun)
+- [gun](https://github.com/Qv2ray/gun)

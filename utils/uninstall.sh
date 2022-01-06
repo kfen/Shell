@@ -207,6 +207,14 @@ qtun_uninstall(){
     rm -f /usr/local/bin/qtun-server
 }
 
+gun_uninstall(){
+    ps -ef |grep -v grep | grep gun-server |awk '{print $2}' | xargs kill -9 > /dev/null 2>&1
+
+    # uninstall gun
+    rm -f /var/run/gun.pid
+    rm -f /usr/local/bin/gun-server
+}
+
 caddy_uninstall(){
     if [[ -e ${CADDY_BIN_PATH} ]]; then
         PID=`ps -ef |grep "caddy" |grep -v "grep" |grep -v "init.d" |grep -v "service" |grep -v "caddy_install" |awk '{print $2}'`
@@ -236,7 +244,7 @@ nginx_uninstall(){
 
 # acme_uninstall(){
     # uninstall acme.sh
-    # ~/.acme.sh/acme.sh --uninstall > /dev/null 2>&1 && rm -rf ~/.acme.sh
+    # /root/.acme.sh/acme.sh --uninstall > /dev/null 2>&1 && rm -rf ~/.acme.sh
 # }
 
 ipcalc_uninstall(){
@@ -257,6 +265,14 @@ log_file_remove(){
     rm -f /var/log/nginx-access.log
 }
 
+remove_cron_job(){
+    if [ -z "$(crontab -l | grep 'ss-plugins.sh renew')" ]; then
+        return
+    fi
+    crontab -l | sed '/ss-plugins.sh renew/d' | crontab -
+    add_cron_job_for_acme
+}
+
 uninstall_services(){
     shadowsocks_uninstall
     v2ray_plugin_uninstall
@@ -270,10 +286,12 @@ uninstall_services(){
     gost_plugin_uninstall
     xray_plugin_uninstall
     qtun_uninstall
+    gun_uninstall
     caddy_uninstall
     nginx_uninstall
     ipcalc_uninstall
     log_file_remove
+    remove_cron_job
 }
 
 

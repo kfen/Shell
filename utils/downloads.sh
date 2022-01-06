@@ -6,7 +6,7 @@ download(){
         echo "${filename} 当前目录中不存在, 现在开始下载."
         wget --no-check-certificate -c -t3 -T60 -O ${1} ${2}
         if [ $? -ne 0 ]; then
-            echo -e "${Error} 下载 ${filename} 失败."
+            _echo -e "下载 ${filename} 失败."
             exit 1
         fi
     fi
@@ -69,6 +69,8 @@ get_plugins_version(){
         get_version_by_github_api "teddysun" "${pluginName}"
     elif [ ${pluginName} = "qtun" ]; then
         get_version_by_github_api "shadowsocks" "${pluginName}"
+    elif [ ${pluginName} = "gun" ]; then
+        get_version_by_github_api "Qv2ray" "${pluginName}"
     fi
 }
 
@@ -76,7 +78,7 @@ judge_latest_version_num_is_none_and_output_error_info(){
     local appName=$1
     local latestVersion=$2
 
-    [ -z ${latestVersion} ] && echo -e "${Error} 获取${appName}最新版本号失败，退出运行." && exit 1
+    [ -z ${latestVersion} ] && _echo -e "获取${appName}最新版本号失败，退出运行." && exit 1
 }
 
 download_ss_file(){
@@ -201,8 +203,7 @@ download_plugins_file(){
         download_service_file ${RABBIT_INIT} ${RABBIT_INIT_ONLINE} ${RABBIT_INIT_LOCAL}
     elif [[ "${plugin_num}" == "8" ]]; then
         local pluginName="simple-tls"
-        # simple_tls_ver=$(get_plugins_version "${pluginName}")
-        simple_tls_ver="0.5.2"
+        simple_tls_ver=$(get_plugins_version "${pluginName}")
         judge_latest_version_num_is_none_and_output_error_info "${pluginName}" "${simple_tls_ver}"
         if [[ ${SimpleTlsVer} = "1" ]]; then
             simple_tls_ver="0.3.4"
@@ -268,5 +269,19 @@ download_plugins_file(){
         qtun_file="qtun-v${qtun_ver}.${MACHINE}-unknown-linux-musl"
         qtun_url="https://github.com/shadowsocks/qtun/releases/download/v${qtun_ver}/qtun-v${qtun_ver}.${MACHINE}-unknown-linux-musl.tar.xz"
         download "${qtun_file}.tar.xz" "${qtun_url}"
+    elif [[ "${plugin_num}" == "12" ]]; then
+        local pluginName="gun"
+        gun_ver=$(get_plugins_version "${pluginName}")
+        judge_latest_version_num_is_none_and_output_error_info "${pluginName}" "${gun_ver}"
+
+        # wriet version num
+        if [ ! -d "$(dirname ${GUN_VERSION_FILE})" ]; then
+            mkdir -p $(dirname ${GUN_VERSION_FILE})
+        fi
+        echo ${gun_ver} > ${GUN_VERSION_FILE}
+
+        gun_file="gun-sip003-linux-${ARCH}"
+        gun_url="https://github.com/Qv2ray/gun/releases/download/${gun_ver}/gun-sip003-linux-${ARCH}"
+        download "${gun_file}" "${gun_url}"
     fi
 }
