@@ -5,8 +5,8 @@ ss_server_config(){
 	    "server_port":${shadowsocksport},
 	    "password":"${shadowsockspwd}",
 	    "timeout":300,
-	    "user":"nobody",
 	    "method":"${shadowsockscipher}",
+	    "ipv6_first": ${ipv6First},
 	    "nameserver":"8.8.8.8",
 	    "mode":"${serverTcpAndUdp}"
 	}
@@ -20,8 +20,8 @@ ss_plugin_server_config(){
 	    "server_port":${shadowsocksport},
 	    "password":"${shadowsockspwd}",
 	    "timeout":300,
-	    "user":"nobody",
 	    "method":"${shadowsockscipher}",
+	    "ipv6_first": ${ipv6First},
 	    "nameserver":"8.8.8.8",
 	    "mode":"${serverTcpAndUdp}",
 	    "plugin":"${serverPluginName}",

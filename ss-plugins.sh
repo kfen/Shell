@@ -5,7 +5,7 @@ export PATH
 
 # shell version
 # ====================
-SHELL_VERSION="2.7.8"
+SHELL_VERSION="2.8.1"
 # ====================
 
 
@@ -153,6 +153,10 @@ xray-plugin
 qtun
 gun
 )
+
+
+# file exist：install
+WEB_INSTALL_MARK="/root/.WebInstallMark"
 
 
 # caddy
@@ -344,11 +348,11 @@ status_init(){
         pluginPid=`ps -ef | grep -vE 'grep|-plugin-opts' | grep gun-server | awk '{print $2}'`
     fi
 
-    if [ -e "${CADDY_BIN_PATH}" ]; then
+    if [ -e "${CADDY_BIN_PATH}" ] && [ -e "${WEB_INSTALL_MARK}" ]; then
         webName="Caddy"
         webPath="${CADDY_BIN_PATH}"
         webPid=`ps -ef | grep -vE 'grep|-plugin-opts' | grep caddy | awk '{print $2}'`
-    elif [ -e "${NGINX_BIN_PATH}" ]; then
+    elif [ -e "${NGINX_BIN_PATH}" ] && [ -e "${WEB_INSTALL_MARK}" ]; then
         webName="Nginx"
         webPath="${NGINX_BIN_PATH}"
         webPid=`ps -ef | grep -vE 'grep|-plugin-opts' | grep nginx.conf | awk '{print $2}'`
@@ -884,6 +888,7 @@ generate_menu_logic(){
 }
 
 config_ss(){
+    local ipv6First="false"
     local server_value="\"0.0.0.0\""
 
     if get_ipv6; then
@@ -892,16 +897,28 @@ config_ss(){
 
         if [ "${ssVer}" = "ss-libev" ]; then
             server_value="[\"[::0]\",\"0.0.0.0\"]"
+            case "${pluginNum}" in
+                8|9|12)
+                    server_value="\"0.0.0.0\""
+                    ;;
+            esac
         elif [ "${ssVer}" = "ss-rust" ]; then
             server_value="\"::\""
+            case "${pluginNum}" in
+                3)
+                    server_value="\"0.0.0.0\""
+                    ;;
+            esac
         fi
 
-        if [ "${pluginNum}" = "4" ]; then
-            server_value="\"0.0.0.0\""
-        elif [ "${pluginNum}" = "6" ]; then
-            server_value="\"0.0.0.0\""
-        elif [ "${pluginNum}" = "7" ]; then
-            server_value="\"0.0.0.0\""
+        case "${pluginNum}" in
+            4|6|7)
+                server_value="\"0.0.0.0\""
+                ;;
+        esac
+
+        if [ "${server_value}" != "\"0.0.0.0\"" ]; then
+            ipv6First="true"
         fi
     fi
 
@@ -1252,10 +1269,12 @@ install_webserver(){
         1)
             improt_package "webServer" "caddy_install.sh"
             install_caddy
+            touch "${WEB_INSTALL_MARK}"
         ;;
         2)
             improt_package "webServer" "nginx_install.sh"
             install_nginx
+            touch "${WEB_INSTALL_MARK}"
         ;;
     esac
 }
