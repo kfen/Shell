@@ -84,7 +84,9 @@ get_config_args(){
         exit 1
     fi
 
-    NameServer=$(cat ${JsonFilePath} | jq -r .nameserver)
+    # ref: https://stackoverflow.com/questions/53135035/jq-returning-null-as-string-if-the-json-is-empty
+    # ref: https://github.com/stedolan/jq/issues/354#issuecomment-43147898
+    NameServer=$(cat ${JsonFilePath} | jq -r '.nameserver // empty')
     [ -z "$NameServer" ] && echo -e "Configuration option 'nameserver' acquisition failed" && exit 1
 }
 
@@ -107,8 +109,12 @@ do_start() {
         return 0
     fi
     ulimit -n 51200
-    get_config_args $CONF
-    nohup $DAEMON -c $CONF --dns $NameServer -vvv > $LOG 2>&1 &
+    if $(grep -q 'nameserver' $CONF); then
+        get_config_args $CONF
+        nohup $DAEMON -c $CONF --dns $NameServer -vvv > $LOG 2>&1 &
+    else
+        nohup $DAEMON -c $CONF -vvv > $LOG 2>&1 &
+    fi
     check_pid
     echo $get_pid > $PID_FILE
     if check_running; then
