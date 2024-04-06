@@ -1,6 +1,6 @@
 caddy_v1_config(){
 	cat > ${CADDY_CONF_FILE}<<-EOF
-	${domain}:443 {
+	${domain}:${firewallNeedOpenPort} {
 	    gzip
 	    log /var/log/caddy-access.log
 	    errors /var/log/caddy-error.log
@@ -10,6 +10,7 @@ caddy_v1_config(){
 	    proxy ${path} localhost:${shadowsocksport} {
 	        websocket
 	        header_upstream -Origin
+	        header_upstream Host {host}
 	    }
 	    proxy / ${mirror_site} {
 	        transparent
@@ -21,7 +22,7 @@ caddy_v1_config(){
 
 caddy_v2_config(){
 	cat > ${CADDY_CONF_FILE}<<-EOF
-	${domain}:443 {
+	${domain}:${firewallNeedOpenPort} {
 	    encode gzip
 	    log {
 	        output file /var/log/caddy-access.log

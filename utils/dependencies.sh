@@ -1,10 +1,11 @@
 # shadowsocks-libev dependencies
-LIBSODIUM_VERSION="1.0.18"
+LIBSODIUM_VERSION="1.0.19"
 LIBSODIUM_FILE="libsodium-${LIBSODIUM_VERSION}"
+UNCOMPRESS_FOLDER_NAME="libsodium-stable"
 LIBSODIUM_VERSION_FILE=~/.deps-ver/libsodium.v
 LIBSODIUM_URL="https://github.com/jedisct1/libsodium/releases/download/${LIBSODIUM_VERSION}-RELEASE/libsodium-${LIBSODIUM_VERSION}.tar.gz"
 
-MBEDTLS_VERSION="2.16.12"
+MBEDTLS_VERSION="2.28.7"
 MBEDTLS_FILE="mbedtls-${MBEDTLS_VERSION}"
 MBEDTLS_VERSION_FILE=~/.deps-ver/mbedtls.v
 MBEDTLS_URL="https://github.com/ARMmbed/mbedtls/archive/${MBEDTLS_FILE}.tar.gz"
@@ -80,7 +81,7 @@ install_dependencies(){
         fi
         [ ! -f /etc/yum.repos.d/epel.repo ] && _echo -e "安装EPEL存储库失败，请检查它。" && exit 1
         [ ! "$(command -v yum-config-manager)" ] && yum install -y yum-utils > /dev/null 2>&1
-        if centosversion 8; then
+        if version_ge $(get_version) 8; then
             [ x"$(yum repolist epel | grep -w epel | awk '{print $NF}')" != x"enabled" ] && yum-config-manager --enable epel > /dev/null 2>&1
         else
             [ x"$(yum-config-manager epel | grep -w enabled | awk '{print $3}')" != x"True" ] && yum-config-manager --enable epel > /dev/null 2>&1
@@ -117,16 +118,26 @@ install_dependencies_logic(){
         local depends=(qrencode jq)
         install_dependencies "${depends[*]}"
     fi
+
+    if [ "${CipherMark}" != "Non-AEAD-2022" ]; then
+        if check_sys packageManager yum; then
+            local depends=(chrony)
+        elif check_sys packageManager apt; then
+            local depends=(ntpdate)
+        fi
+        install_dependencies "${depends[*]}"
+    fi
 }
 
 install_libsodium(){
     local installStatus=$1
 
     cd ${CUR_DIR}
+    pushd ${TEMP_DIR_PATH} > /dev/null 2>&1
     _echo -i "下载${LIBSODIUM_FILE}."
     download "${LIBSODIUM_FILE}.tar.gz" "${LIBSODIUM_URL}"
     _echo -i "解压${LIBSODIUM_FILE}."
-    tar zxf ${LIBSODIUM_FILE}.tar.gz && cd ${LIBSODIUM_FILE}
+    tar zxf ${LIBSODIUM_FILE}.tar.gz && cd ${UNCOMPRESS_FOLDER_NAME}
     _echo -i "编译安装${LIBSODIUM_FILE}."
     ./configure --prefix=/usr && make && make install
     if [ $? -ne 0 ]; then
@@ -134,6 +145,7 @@ install_libsodium(){
         install_cleanup
         exit 1
     fi
+    popd > /dev/null 2>&1
     # wriet version num
     if [ ! -d "$(dirname ${LIBSODIUM_VERSION_FILE})" ]; then
         mkdir -p $(dirname ${LIBSODIUM_VERSION_FILE})
@@ -161,6 +173,7 @@ install_mbedtls(){
     local installStatus=$1
 
     cd ${CUR_DIR}
+    pushd ${TEMP_DIR_PATH} > /dev/null 2>&1
     _echo -i "下载${MBEDTLS_FILE}."
     download "${MBEDTLS_FILE}.tar.gz" "${MBEDTLS_URL}"
     _echo -i "解压${MBEDTLS_FILE}."
@@ -175,6 +188,7 @@ install_mbedtls(){
         install_cleanup
         exit 1
     fi
+    popd > /dev/null 2>&1
     # wriet version num
     if [ ! -d "$(dirname ${MBEDTLS_VERSION_FILE})" ]; then
         mkdir -p $(dirname ${MBEDTLS_VERSION_FILE})
@@ -202,6 +216,9 @@ add_more_entropy(){
     # Ubuntu series is started by default after installation
     # Debian series needs to add configuration to start after installation
     # CentOS 6 is installed by default but not started. CentOS 7 is not started by default after installation. CentOS 8 is installed and started by default.
+    if [ "${SS_VERSION}" != "ss-libev" ]; then return; fi
+    local KERNEL_VERSION=$(uname -r | cut -d'-' -f1)
+    if version_ge ${KERNEL_VERSION} 5.6; then return; fi
     local ENTROPY_SIZE_BEFORE=$(cat /proc/sys/kernel/random/entropy_avail)
     if [[ ${ENTROPY_SIZE_BEFORE} -lt 1000 ]]; then
         _echo -i "安装rng-tools之前熵池的熵值为${Green}${ENTROPY_SIZE_BEFORE}${suffix}"

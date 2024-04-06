@@ -6,6 +6,10 @@ _check_running() {
     fi
     
     read PID < $PID_FILE
+    if [ -z "$PID" ]; then
+        return 2
+    fi
+
     if [ -d "/proc/$PID" ]; then
         return 0
     else
@@ -68,7 +72,7 @@ sip003_way_start(){
     local processPid
 
     if [ "$(command -v "${binaryName}")" ]; then
-        processPid=`ps -ef | grep -Ev 'grep|-plugin-opts' | grep v2ray-plugin | awk '{print $2}'`
+        processPid=`ps -ef | grep -Ev 'grep|-plugin-opts' | grep "${binaryName}" | awk '{print $2}'`
         sip003_plugin_start "${projectName}" "${processPid}"
     fi
 }
@@ -87,7 +91,7 @@ nginx_start(){
 
 start_services(){
     initd_file_start "ss-server" "${SHADOWSOCKS_LIBEV_INIT}"
-    initd_file_start "ssserver" "${SHADOWSOCKS_RUST_INIT}"
+    initd_file_start "ssservice" "${SHADOWSOCKS_RUST_INIT}"
     initd_file_start "go-shadowsocks2" "${GO_SHADOWSOCKS2_INIT}"
     initd_file_start "kcptun-server" "${KCPTUN_INIT}"
     initd_file_start "ck-server" "${CLOAK_INIT}"

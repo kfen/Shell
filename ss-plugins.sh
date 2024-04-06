@@ -5,7 +5,7 @@ export PATH
 
 # shell version
 # ====================
-SHELL_VERSION="2.8.1"
+SHELL_VERSION="2.8.4"
 # ====================
 
 
@@ -23,12 +23,16 @@ fi
 
 
 # bbr
-TEDDYSUN_BBR_SCRIPT_URL="https://git.io/vbUk0"
-CHIAKGE_BBR_SCRIPT_URL="https://git.io/vxJ1I"
+TEDDYSUN_BBR_SCRIPT_URL="https://raw.githubusercontent.com/teddysun/across/master/bbr.sh"
 
 
 # Humanization config PATH
 HUMAN_CONFIG="/etc/shadowsocks/humanization.conf"
+
+
+# script env dir
+SS_PLUGINS_SCRIPT_ENV_DIR="/root/.ssPluginsScriptEnv"
+SS_PLUGINS_SCRIPT_ENV_VARIABLES_FILE="${SS_PLUGINS_SCRIPT_ENV_DIR}/env.info"
 
 
 # shadowsocks config
@@ -43,7 +47,7 @@ SHADOWSOCKS_LIBEV_INIT_ONLINE="${BASE_URL}/service/shadowsocks-libev.sh"
 
 # shadowsocks-rust config and init
 SHADOWSOCKS_RUST_INSTALL_PATH="/usr/local/bin"
-SHADOWSOCKS_RUST_BIN_PATH="/usr/local/bin/ssserver"
+SHADOWSOCKS_RUST_BIN_PATH="/usr/local/bin/ssservice"
 SHADOWSOCKS_RUST_INIT="/etc/init.d/shadowsocks-rust"
 SHADOWSOCKS_RUST_INIT_LOCAL="./service/shadowsocks-rust.sh"
 SHADOWSOCKS_RUST_INIT_ONLINE="${BASE_URL}/service/shadowsocks-rust.sh"
@@ -287,15 +291,15 @@ status_init(){
     if [ -e "${SHADOWSOCKS_LIBEV_BIN_PATH}" ]; then
         ssName="Shadowsocks-libev"
         ssPath="${SHADOWSOCKS_LIBEV_BIN_PATH}"
-        ssPid=`ps -ef | grep -v grep | grep ss-server | awk '{print $2}'`
+        ssPid=`ps -ef | grep -v grep | grep $SHADOWSOCKS_LIBEV_BIN_PATH | awk '{print $2}'`
     elif [ -e "${SHADOWSOCKS_RUST_BIN_PATH}" ]; then
         ssName="Shadowsocks-rust"
         ssPath="${SHADOWSOCKS_RUST_BIN_PATH}"
-        ssPid=`ps -ef | grep -v grep | grep ssserver | awk '{print $2}'`
+        ssPid=`ps -ef | grep -v grep | grep $SHADOWSOCKS_RUST_BIN_PATH | awk '{print $2}'`
     elif [ -e "${GO_SHADOWSOCKS2_BIN_PATH}" ]; then
         ssName="Go-shadowsocks2"
         ssPath="${GO_SHADOWSOCKS2_BIN_PATH}"
-        ssPid=`ps -ef | grep -v grep | grep go-shadowsocks2 | awk '{print $2}'`
+        ssPid=`ps -ef | grep -v grep | grep $GO_SHADOWSOCKS2_BIN_PATH | awk '{print $2}'`
     fi
 
     if [ -e "${V2RAY_PLUGIN_BIN_PATH}" ]; then
@@ -610,24 +614,19 @@ check_script_update(){
     fi
 }
 
-choose_script_bbr(){
-    local bbrVersion=(
-        "秋水逸冰-BBR"
-        "BBR|BBR魔改|BBRplus|Lotserver版本"
-    )
-    generate_menu_logic "${bbrVersion[*]}" "BBR的安装脚本" "1"
-    bbr_menu_num="${inputInfo}"
-    case "${bbr_menu_num}" in
-        1)
-            source <(curl -sL "${TEDDYSUN_BBR_SCRIPT_URL}")
-            ;;
-        2)
-            source <(curl -sL "${CHIAKGE_BBR_SCRIPT_URL}")
-            ;;
-        *)
-            _echo -e "请输入正确的数字 [1-2]"
-            ;;
-    esac
+url_encode() {
+    local length="${#1}"
+    for (( i = 0; i < length; i++ )); do
+        local c="${1:i:1}"
+        case $c in
+            [a-zA-Z0-9.~_-])
+                printf "%s" "$c"
+                ;;
+            *)
+                printf "%%%02X" "'$c"
+                ;;
+        esac
+    done
 }
 
 get_ip(){
@@ -672,10 +671,6 @@ get_domain_ip(){
     fi
 }
 
-get_str_replace(){
-    echo -n $1 | sed 's/:/%3A/g;s/;/%3B/g;s/=/%3D/g;s/\//%2F/g'
-}
-
 get_str_base64_encode(){
     echo -n $1 | base64 -w0
 }
@@ -709,6 +704,25 @@ get_version(){
     else
         grep -oE  "[0-9.]+" /etc/issue
     fi
+}
+
+get_env_variable(){
+    local varName=$1
+    local keyValuePair
+
+    if [ -e "${SS_PLUGINS_SCRIPT_ENV_VARIABLES_FILE}" ]; then
+        keyValuePair=$(grep "${varName}" "${SS_PLUGINS_SCRIPT_ENV_VARIABLES_FILE}")
+        [ -n "${keyValuePair}" ] && export "${keyValuePair}" && return 0
+    else
+        return 1
+    fi
+}
+
+write_env_variable(){
+    local keyValuePairText=$1
+
+    [ ! -e "${SS_PLUGINS_SCRIPT_ENV_DIR}" ] && mkdir -p "${SS_PLUGINS_SCRIPT_ENV_DIR}"
+    echo "${keyValuePairText}" >> "${SS_PLUGINS_SCRIPT_ENV_VARIABLES_FILE}"
 }
 
 centosversion(){
@@ -1316,6 +1330,20 @@ add_cron_job(){
     (crontab -l ; echo "${random_minute} 0 * * * \"${CUR_DIR}\"/ss-plugins.sh renew > /dev/null") | sort - | uniq - | crontab -
 }
 
+sync_time(){
+    if [ "${CipherMark}" = "Non-AEAD-2022" ]; then
+        return
+    fi
+    _echo -i "开始同步时间.."
+    if [ "$(command -v ntpdate)" ]; then
+        ntpdate pool.ntp.org
+        [ $? -eq 0 ] && _echo -i "现在时间: $(date -R) 同步完成..."
+    elif [ "$(command -v chronyc)" ]; then
+        chronyc -a makestep
+        [ $? -eq 0 ] && _echo -i "现在时间: $(date -R) 同步完成..."
+    fi
+}
+
 install_status(){
     status_init
 
@@ -1335,6 +1363,8 @@ install_step_all(){
     install_status
     disable_selinux
     install_prepare
+    TEMP_DIR_PATH=$(mktemp -d)
+    trap "rm -rf $TEMP_DIR_PATH; exit" 2
     improt_package "utils" "dependencies.sh"
     install_dependencies_logic
     improt_package "utils" "downloads.sh"
@@ -1344,6 +1374,7 @@ install_step_all(){
     config_firewall_logic
     install_main
     install_webserver
+    sync_time
     add_more_entropy
     install_cleanup
     improt_package "templates" "config.sh"
@@ -1359,37 +1390,7 @@ install_step_all(){
 
 install_cleanup(){
     cd "${CUR_DIR}"
-    # ss-libev
-    rm -rf "${LIBSODIUM_FILE}" "${LIBSODIUM_FILE}.tar.gz"
-    rm -rf "${MBEDTLS_FILE}" "${MBEDTLS_FILE}.tar.gz"
-    rm -rf "${shadowsocks_libev_file}" "${shadowsocks_libev_file}.tar.gz"
-    
-    # ss-rust
-    rm -rf "${shadowsocks_rust_file}.tar.xz"
-    
-    # v2ray-plugin
-    rm -rf "${v2ray_plugin_file}.tar.gz"
-    
-    # kcptun
-    rm -rf "client_linux_${ARCH}" "${kcptun_file}.tar.gz"
-    
-    # simple-obfs
-    rm -rf simple-obfs
-    
-    # mos-tls-tunnel
-    rm -rf "${mtt_file}.zip" LICENSE README.md mtt-client
-
-    #simple-tls
-    rm -rf "${simple_tls_file}.zip" LICENSE  README.md README_zh.md README_en.md
-
-    # gost-plugin
-    rm -rf "${gost_plugin_file}.zip"
-
-    # xray-plugin
-    rm -rf "${xray_plugin_file}.tar.gz"
-
-    # qtun
-    rm -rf qtun-client "${qtun_file}.tar.xz"
+    rm -rf  ${TEMP_DIR_PATH}
 }
 
 do_uid(){
@@ -1520,7 +1521,7 @@ do_install(){
     [ -z "${menu_num}" ] && menu_num=2
     case "${menu_num}" in
         1)   
-            choose_script_bbr
+            source <(curl -sL "${TEDDYSUN_BBR_SCRIPT_URL}")
             ;;
         2)
             install_step_all

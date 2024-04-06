@@ -1,18 +1,18 @@
 kill_process(){
-    local binaryName=$1
+    local binaryFilePath=$1
     local projectName=$2
 
-    ps -ef | grep -v grep | grep "${binaryName}" | awk '{print $2}' | xargs kill -9 > /dev/null 2>&1
+    ps -ef | grep -v grep | grep "${binaryFilePath}" | awk '{print $2}' | xargs kill -9 > /dev/null 2>&1
 
-    if [ "$(command -v "${binaryName}")" ]; then
+    if [ "$(command -v "${binaryFilePath}")" ]; then
         echo -e "Stopping ${projectName} success"
     fi
 }
 
 stop_services(){
-    kill_process "ss-server" "shadowsocks-libev"
-    kill_process "ssserver" "shadowsocks-rust"
-    kill_process "go-shadowsocks2" "go-shadowsocks"
+    kill_process "$SHADOWSOCKS_LIBEV_BIN_PATH" "shadowsocks-libev"
+    kill_process "$SHADOWSOCKS_RUST_BIN_PATH" "shadowsocks-rust"
+    kill_process "$GO_SHADOWSOCKS2_BIN_PATH" "go-shadowsocks"
     kill_process "v2ray-plugin" "v2ray-plugin"
     kill_process "obfs-server" "simple-obfs"
     kill_process "kcptun-server" "kcptun"
