@@ -224,13 +224,15 @@ caddy_uninstall(){
 nginx_uninstall(){
     if [[ -e ${NGINX_BIN_PATH} ]] && [[ -e ${WEB_INSTALL_MARK} ]]; then
         if check_sys packageManager yum; then
-            sudo yum remove -y nginx > /dev/null 2>&1
+            yum remove -y nginx > /dev/null 2>&1
             rm -rf $(dirname ${NGINX_CONFIG})
         elif check_sys packageManager apt; then
-            sudo apt remove -y nginx --purge > /dev/null 2>&1
+            apt remove -y nginx --purge > /dev/null 2>&1
             rm -rf $(dirname ${NGINX_CONFIG})
         fi
         rm -rf ${WEB_INSTALL_MARK}
+        rm -rf /etc/apt/trusted.gpg
+        rm -rf /etc/apt/sources.list.d/nginx.list
     fi
 }
 
